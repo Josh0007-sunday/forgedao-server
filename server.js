@@ -33,8 +33,7 @@ app.use(session({
     maxAge: 24 * 60 * 60 * 1000,
     httpOnly: true,
     domain: process.env.NODE_ENV === 'production' ? '.onrender.com' : undefined
-  },
-  store: /* your session store */ 
+  }
 }));
 
 app.use(passport.initialize());
@@ -76,7 +75,7 @@ app.use((err, req, res, next) => {
 
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {
-console.log(`Server running on port ${PORT}`);
+  console.log(`Server running on port ${PORT}`);
 });
 
 module.exports = app;
