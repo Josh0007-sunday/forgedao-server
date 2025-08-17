@@ -146,7 +146,7 @@ app.use((err, req, res, next) => {
   });
 });
 
-// 404 handler
+// 404 handler - Fixed for Express 5.x
 app.use('/*path', (req, res) => {
   res.status(404).json({ 
     message: 'Route not found',
