@@ -31,14 +31,22 @@ exports.logout = (req, res) => {
 };
 
 exports.getCurrentUser = (req, res) => {
+  console.log('Session ID:', req.sessionID);
+  console.log('Session:', req.session);
+  console.log('User:', req.user);
+  console.log('Is authenticated:', req.isAuthenticated());
+  
   if (!req.user) {
     return res.status(401).json({ message: 'Not authenticated' });
   }
+  
   res.json({
     id: req.user.id || req.user._id,
     username: req.user.username,
     bio: req.user.bio,
     walletAddress: req.user.walletAddress,
+    githubId: req.user.githubId,
+    createdAt: req.user.createdAt,
     rank: req.user.rank || 'Code Novice'
   });
 };
