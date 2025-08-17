@@ -28,12 +28,19 @@ app.use(express.json());
 
 // Configure session with PostgreSQL store
 app.use(session({
-  secret: process.env.SESSION_SECRET || '',
+  store: new pgSession({
+    conString: process.env.DATABASE_URL,
+    tableName: 'user_sessions',
+    createTableIfMissing: true
+  }),
+  secret: process.env.SESSION_SECRET,
   resave: false,
   saveUninitialized: false,
   cookie: {
     secure: process.env.NODE_ENV === 'production',
-    maxAge: 24 * 60 * 60 * 1000 // 1 day
+    sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
+    maxAge: 24 * 60 * 60 * 1000, // 24 hours
+    httpOnly: true
   }
 }));
 
@@ -50,12 +57,6 @@ app.use((req, res, next) => {
 });
 
 // Routes
-app.use((req, res, next) => {
-  console.log('Request URL:', req.url);
-  console.log('Session ID:', req.sessionID);
-  console.log('User:', req.user ? req.user.username : 'No user');
-  next();
-});
 app.use('/auth', require('./routes/auth.routes'));
 app.use('/api/user', require('./routes/user.routes'));
 app.use('/api/proposals', require('./routes/proposal.routes'));
