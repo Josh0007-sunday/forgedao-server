@@ -37,7 +37,11 @@ exports.getCurrentUser = (req, res) => {
   console.log('Is authenticated:', req.isAuthenticated());
   
   if (!req.user) {
-    return res.status(401).json({ message: 'Not authenticated' });
+     return res.status(401).json({ 
+      authenticated: false,
+      message: 'Not authenticated',
+      sessionId: req.sessionID
+    });
   }
   
   res.json({
