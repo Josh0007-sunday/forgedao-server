@@ -17,19 +17,26 @@ connectDB();
 
 // Middleware
 app.use(cors({
-  origin: process.env.FRONTEND_URL || '',
+  origin: process.env.FRONTEND_URL || 'http://localhost:5173',
   credentials: true
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization']
 }));
 app.use(express.json());
 app.use(session({
-  secret: process.env.SESSION_SECRET || '',
+  secret: process.env.SESSION_SECRET,
   resave: false,
   saveUninitialized: false,
   cookie: {
     secure: process.env.NODE_ENV === 'production',
-    maxAge: 24 * 60 * 60 * 1000 // 1 day
-  }
+    sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
+    maxAge: 24 * 60 * 60 * 1000,
+    httpOnly: true,
+    domain: process.env.NODE_ENV === 'production' ? '.onrender.com' : undefined
+  },
+  store: /* your session store */ 
 }));
+
 app.use(passport.initialize());
 app.use(passport.session());
 
