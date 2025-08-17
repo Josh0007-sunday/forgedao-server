@@ -1,6 +1,7 @@
 require('dotenv').config();
 const express = require('express');
 const session = require('express-session');
+const pgSession = require('connect-pg-simple')(session);
 const cors = require('cors');
 const passport = require('passport');
 
@@ -22,22 +23,31 @@ app.use(cors({
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization']
 }));
+
 app.use(express.json());
+
+// Configure session with PostgreSQL store
 app.use(session({
-  secret: process.env.SESSION_SECRET,
+  secret: process.env.SESSION_SECRET || '',
   resave: false,
   saveUninitialized: false,
   cookie: {
     secure: process.env.NODE_ENV === 'production',
-    sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
-    maxAge: 24 * 60 * 60 * 1000,
-    httpOnly: true,
-    domain: undefined
+    maxAge: 24 * 60 * 60 * 1000 // 1 day
   }
 }));
 
 app.use(passport.initialize());
 app.use(passport.session());
+
+// Debug middleware (remove in production)
+app.use((req, res, next) => {
+  console.log(`${req.method} ${req.url}`);
+  console.log('Session ID:', req.sessionID);
+  console.log('User:', req.user ? req.user.username : 'No user');
+  console.log('Is authenticated:', req.isAuthenticated && req.isAuthenticated());
+  next();
+});
 
 // Routes
 app.use((req, res, next) => {
