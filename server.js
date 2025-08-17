@@ -39,6 +39,12 @@ app.use(passport.initialize());
 app.use(passport.session());
 
 // Routes
+app.use((req, res, next) => {
+  console.log('Request URL:', req.url);
+  console.log('Session ID:', req.sessionID);
+  console.log('User:', req.user ? req.user.username : 'No user');
+  next();
+});
 app.use('/auth', require('./routes/auth.routes'));
 app.use('/api/user', require('./routes/user.routes'));
 app.use('/api/proposals', require('./routes/proposal.routes'));
