@@ -83,7 +83,7 @@ app.use(session({
     sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax', // 'none' in production, 'lax' in development
     maxAge: 24 * 60 * 60 * 1000,
     httpOnly: true,
-    domain: process.env.NODE_ENV === 'production' ? '.render.com' : undefined
+    domain: process.env.NODE_ENV === 'production' ? 'forgedao-server.onrender.com' : undefined
   }
 }));
 
