@@ -16,7 +16,7 @@ const app = express();
 // Initialize database connection
 connectDB();
 
-// CORS Configuration - Fixed to handle multiple origins and dynamic paths
+// CORS Configuration - PRODUCTION COOKIE FIX
 const corsOptions = {
   origin: function (origin, callback) {
     // Allow requests with no origin (like mobile apps or curl requests)
@@ -45,19 +45,25 @@ const corsOptions = {
       callback(new Error('Not allowed by CORS'));
     }
   },
-  credentials: true,
+  credentials: true, // CRITICAL: This must be true for cookies
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
   allowedHeaders: [
     'Content-Type', 
     'Authorization', 
     'X-Requested-With', 
     'Accept',
-    'Origin'
+    'Origin',
+    'Cookie' // Explicitly allow Cookie header
   ],
-  exposedHeaders: ['set-cookie'],
-  optionsSuccessStatus: 200, // Some legacy browsers choke on 204
+  exposedHeaders: ['set-cookie'], // Expose set-cookie header
+  optionsSuccessStatus: 200,
   preflightContinue: false
 };
+
+// Apply trust proxy for production
+if (process.env.NODE_ENV === 'production') {
+  app.set('trust proxy', 1);
+}
 
 app.use(cors(corsOptions));
 
@@ -66,7 +72,7 @@ app.options('/{*path}', cors(corsOptions));
 
 app.use(express.json());
 
-// Configure session with PostgreSQL store
+// Configure session with PostgreSQL store - PRODUCTION COOKIE FIX
 app.use(session({
   store: new pgSession({
     conString: process.env.DATABASE_URL,
@@ -78,15 +84,17 @@ app.use(session({
   secret: process.env.SESSION_SECRET || 'ForgeDaoSecret',
   resave: false,
   saveUninitialized: false,
-  name: 'forge.sid', // Custom session name
+  name: 'connect.sid', // Use default session name for better compatibility
   cookie: {
-    secure: process.env.NODE_ENV === 'production',
-    sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
+    secure: process.env.NODE_ENV === 'production', // HTTPS only in production
+    sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax', // Allow cross-site cookies
     maxAge: 24 * 60 * 60 * 1000, // 24 hours
     httpOnly: true,
-    domain: process.env.NODE_ENV === 'production' ? undefined : undefined
+    // Don't set domain - let browser handle it automatically
+    domain: undefined
   },
-  rolling: true // Reset expiration on each request
+  rolling: true, // Reset expiration on each request
+  proxy: process.env.NODE_ENV === 'production' // Trust proxy in production
 }));
 
 app.use(passport.initialize());
@@ -106,8 +114,7 @@ app.use((req, res, next) => {
 app.use('/auth', require('./routes/auth.routes'));
 app.use('/api/user', require('./routes/user.routes'));
 app.use('/api/proposals', require('./routes/proposal.routes'));
-// Temporarily comment out ranking routes to fix the startup issue
-// app.use('/api/ranking', require('./routes/ranking.routes'));
+app.use('/api/ranking', require('./routes/ranking.routes'));
 app.use('/api/admin', require('./routes/admin.routes'));
 app.use('/api/events', require('./routes/events.routes'));
 

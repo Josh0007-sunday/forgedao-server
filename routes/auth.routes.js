@@ -17,6 +17,7 @@
 // module.exports = router;
 
 // routes/auth.routes.js - Fixed authentication flow
+// routes/auth.routes.js - Fixed authentication flow
 const express = require('express');
 const router = express.Router();
 const passport = require('passport');
@@ -88,7 +89,12 @@ router.get('/logout', (req, res) => {
       
       // Clear all possible session cookies
       res.clearCookie('connect.sid');
-      res.clearCookie('forge.sid');
+      res.clearCookie('connect.sid', { 
+        domain: undefined,
+        path: '/',
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax'
+      });
       
       const frontendUrl = process.env.FRONTEND_URL || 'https://forge-dao.vercel.app';
       res.redirect(`${frontendUrl}/login`);
