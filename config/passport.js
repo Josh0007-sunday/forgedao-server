@@ -47,6 +47,7 @@
 // module.exports = passport;
 
 
+// config/passport.js - Fixed passport configuration
 const passport = require('passport');
 const GitHubStrategy = require('passport-github2').Strategy;
 const User = require('../models/User');
@@ -59,11 +60,15 @@ passport.use(new GitHubStrategy({
   },
   async (accessToken, refreshToken, profile, done) => {
     try {
-      console.log('GitHub profile received:', profile);
+      console.log('=== GITHUB STRATEGY CALLBACK ===');
+      console.log('Profile ID:', profile.id);
+      console.log('Profile username:', profile.username);
+      console.log('Profile emails:', profile.emails);
       
       let user = await User.findOne({ githubId: profile.id });
       
       if (!user) {
+        console.log('Creating new user...');
         user = new User({
           githubId: profile.id,
           username: profile.username,
@@ -71,37 +76,46 @@ passport.use(new GitHubStrategy({
           accessToken: accessToken
         });
       } else {
+        console.log('Updating existing user...');
         user.accessToken = accessToken;
+        // Update username if it changed
+        user.username = profile.username;
       }
       
       await user.save();
-      console.log('User saved/updated:', user.id);
+      console.log('User saved/updated with ID:', user.id);
+      console.log('================================');
+      
       return done(null, user);
     } catch (error) {
-      console.error('Passport error:', error);
-      return done(error);
+      console.error('Passport strategy error:', error);
+      return done(error, null);
     }
   }
 ));
 
-// SERIALIZATION FIX - Use the actual user object, not just ID
+// Serialization - Store user ID in session
 passport.serializeUser((user, done) => {
-  console.log('Serializing user:', user.id);
+  console.log('Serializing user ID:', user.id);
   done(null, user.id);
 });
 
-// DESERIALIZATION FIX - Make sure this works properly
+// Deserialization - Retrieve user from database
 passport.deserializeUser(async (id, done) => {
   try {
-    console.log('Deserializing user:', id);
+    console.log('Deserializing user ID:', id);
     const user = await User.findById(id);
+    
     if (!user) {
-      return done(new Error('User not found'));
+      console.log('User not found during deserialization');
+      return done(new Error('User not found'), null);
     }
+    
+    console.log('User deserialized successfully:', user.username);
     done(null, user);
   } catch (error) {
     console.error('Deserialization error:', error);
-    done(error);
+    done(error, null);
   }
 });
 

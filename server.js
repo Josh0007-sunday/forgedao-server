@@ -61,29 +61,32 @@ const corsOptions = {
 
 app.use(cors(corsOptions));
 
-// Handle preflight OPTIONS requests explicitly
-app.options('/*path', cors(corsOptions));
+// Handle preflight OPTIONS requests explicitly - EXPRESS 5 COMPATIBLE
+app.options('/{*path}', cors(corsOptions));
 
 app.use(express.json());
 
-// Configure session with PostgreSQL store
 // Configure session with PostgreSQL store
 app.use(session({
   store: new pgSession({
     conString: process.env.DATABASE_URL,
     tableName: 'user_sessions',
     createTableIfMissing: true,
-    ttl: 24 * 60 * 60
+    ttl: 24 * 60 * 60,
+    errorLog: console.error
   }),
-  secret: process.env.SESSION_SECRET,
+  secret: process.env.SESSION_SECRET || 'ForgeDaoSecret',
   resave: false,
   saveUninitialized: false,
+  name: 'forge.sid', // Custom session name
   cookie: {
-    secure: process.env.NODE_ENV === 'production', // true in production, false in development
-    sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax', // 'none' in production, 'lax' in development
-    maxAge: 24 * 60 * 60 * 1000,
+    secure: process.env.NODE_ENV === 'production',
+    sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
+    maxAge: 24 * 60 * 60 * 1000, // 24 hours
     httpOnly: true,
-  }
+    domain: process.env.NODE_ENV === 'production' ? undefined : undefined
+  },
+  rolling: true // Reset expiration on each request
 }));
 
 app.use(passport.initialize());
@@ -103,7 +106,8 @@ app.use((req, res, next) => {
 app.use('/auth', require('./routes/auth.routes'));
 app.use('/api/user', require('./routes/user.routes'));
 app.use('/api/proposals', require('./routes/proposal.routes'));
-app.use('/api/ranking', require('./routes/ranking.routes'));
+// Temporarily comment out ranking routes to fix the startup issue
+// app.use('/api/ranking', require('./routes/ranking.routes'));
 app.use('/api/admin', require('./routes/admin.routes'));
 app.use('/api/events', require('./routes/events.routes'));
 
@@ -113,12 +117,21 @@ app.get('/health', async (req, res) => {
     const { getDB } = require('./config/db');
     const sql = getDB();
     const result = await sql`SELECT version()`;
+    
+    // Test session store
+    const sessionStoreOk = req.sessionStore ? true : false;
+    
     res.json({ 
       status: 'healthy', 
       database: 'connected',
+      sessionStore: sessionStoreOk ? 'connected' : 'error',
       version: result[0].version,
       environment: process.env.NODE_ENV || 'development',
-      timestamp: new Date().toISOString()
+      timestamp: new Date().toISOString(),
+      session: {
+        id: req.sessionID,
+        authenticated: req.isAuthenticated ? req.isAuthenticated() : false
+      }
     });
   } catch (error) {
     res.status(500).json({ 
@@ -130,7 +143,18 @@ app.get('/health', async (req, res) => {
   }
 });
 
-// Add this right after session middleware
+// Session debug endpoint
+app.get('/debug/session', (req, res) => {
+  res.json({
+    sessionID: req.sessionID,
+    session: req.session,
+    user: req.user,
+    isAuthenticated: req.isAuthenticated ? req.isAuthenticated() : false,
+    cookies: req.headers.cookie
+  });
+});
+
+// Enhanced session middleware debugging
 app.use((req, res, next) => {
   console.log('=== SESSION MIDDLEWARE ===');
   console.log('Session ID:', req.sessionID);
@@ -158,12 +182,13 @@ app.use((err, req, res, next) => {
   });
 });
 
-// 404 handler - Fixed for Express 5.x
-app.use('/*path', (req, res) => {
+// 404 handler - EXPRESS 5 COMPATIBLE: Named wildcard
+app.all('/{*path}', (req, res) => {
   res.status(404).json({ 
     message: 'Route not found',
     path: req.originalUrl,
-    method: req.method
+    method: req.method,
+    params: req.params // This will show the captured path
   });
 });
 
@@ -172,6 +197,8 @@ app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
   console.log(`Environment: ${process.env.NODE_ENV || 'development'}`);
   console.log(`Frontend URL: ${process.env.FRONTEND_URL || 'http://localhost:5173'}`);
+  console.log(`Session Secret: ${process.env.SESSION_SECRET ? 'Set' : 'Not Set'}`);
+  console.log('Express 5 compatible wildcards enabled');
 });
 
 module.exports = app;
