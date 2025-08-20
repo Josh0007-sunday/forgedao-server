@@ -67,20 +67,23 @@ app.options('/*path', cors(corsOptions));
 app.use(express.json());
 
 // Configure session with PostgreSQL store
+// Configure session with PostgreSQL store
 app.use(session({
   store: new pgSession({
     conString: process.env.DATABASE_URL,
     tableName: 'user_sessions',
-    createTableIfMissing: true
+    createTableIfMissing: true,
+    ttl: 24 * 60 * 60
   }),
   secret: process.env.SESSION_SECRET,
   resave: false,
   saveUninitialized: false,
   cookie: {
-    secure: process.env.NODE_ENV === 'production',
-    sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
-    maxAge: 24 * 60 * 60 * 1000, // 24 hours
-    httpOnly: true
+    secure: process.env.NODE_ENV === 'production', // true in production, false in development
+    sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax', // 'none' in production, 'lax' in development
+    maxAge: 24 * 60 * 60 * 1000,
+    httpOnly: true,
+    domain: process.env.NODE_ENV === 'production' ? '.render.com' : undefined
   }
 }));
 
