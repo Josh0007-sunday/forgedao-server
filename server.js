@@ -131,6 +131,16 @@ app.get('/health', async (req, res) => {
   }
 });
 
+// Add this right after session middleware
+app.use((req, res, next) => {
+  console.log('=== SESSION MIDDLEWARE ===');
+  console.log('Session ID:', req.sessionID);
+  console.log('Session data:', req.session);
+  console.log('User:', req.user);
+  console.log('==========================');
+  next();
+});
+
 // Error handling middleware
 app.use((err, req, res, next) => {
   console.error('Error occurred:', err.stack);
